@@ -1,17 +1,15 @@
-from flask import Flask, Response
+from typing import Optional, Dict
+
+from flask import Flask, Response, request
 import json
+from langDetect import LangDetect, langs
 
 app = Flask(__name__)
 
-@app.route("/detect/info", methods=["GET"])
+
+@app.route("/", methods=["GET"])
 def get_infos():
     # Votre code ici
-    langs = {'eng': 'English', 'pol': 'Polish', 'deu': 'German', 'fra': 'French', 'spa': 'Spanish', 'ita': 'Italian', 'tur': 'Turkish', 
-             'por': 'Portuguese', 'rus': 'Russian', 'ukr': 'Ukrainian', 'nld': 'Dutch', 'bul': 'Bulgarian', 'ell': 'Greek', 'swe': 'Swedish', 
-             'hun': 'Hungarian', 'gle': 'Irish', 'lav': 'Latvian', 'dan': 'Danish', 'fin': 'Finnish',
-             'ara': 'Arabic', 'heb': 'Hebrew', 'zho': 'Chinese', 'hin': 'Hindi', 'jpn': 'Japanese', 'fas': 'Persian', 'kor': 'Korean',
-             'hye': 'Armenian', 'swa': 'Swahili', 'ber': 'Berber', 'kab': 'Kabyle', 'ces': 'Czech', 'lat': 'Latin',
-             'nor': 'Norwegian', 'ron': 'Moldavian, Moldovan, Romanian', 'slk': 'Slovak', 'hbs': 'Serbo-Croatian', 'mkd': 'Macedonian'}
 
     # Convertir le dictionnaire en JSON
     json_data = json.dumps(langs)
@@ -24,3 +22,30 @@ def get_infos():
     )
 
     return response
+
+
+@app.route("/detect", methods=["POST"])
+def detect():
+    data = request.get_json()
+    text = data.get('text')
+
+    if not text:
+        return Response(response=json.dumps({'error': 'text is required'}), status=400, mimetype='application/json')
+
+    print(text)
+
+    predict = LangDetect().detect(text)
+
+    json_data = json.dumps(predict)
+
+    response = app.response_class(
+        response=json_data,
+        status=200,
+        mimetype='application/json'
+    )
+
+    return response
+
+
+if __name__ == "__main__":
+    app.run(debug=True, port=8080)
