@@ -2,11 +2,24 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 import time
-import json
+import sys
 
 import logging
-from logger import get_logger
+
 from tf_keras.models import load_model
+
+_logger: Optional[logging.Logger] = None
+
+langs = {'eng': 'English', 'deu': 'German', 'fra': 'French', 'spa': 'Spanish', 'ita': 'Italian',
+         'tur': 'Turkish',
+         'rus': 'Russian',
+         'ell': 'Greek',
+         'dan': 'Danish', 'fin': 'Finnish',
+         'ara': 'Arabic', 'heb': 'Hebrew', 'zho': 'Chinese', 'hin': 'Hindi', 'jpn': 'Japanese', 'fas': 'Persian',
+         'kor': 'Korean',
+         'lat': 'Latin',
+         'nor': 'Norwegian'
+         }
 
 
 class LangDetect:
@@ -27,7 +40,7 @@ class LangDetect:
         )
 
         if not self._model_dir.is_dir():
-            raise LangDetectorError(f"model dir not found at {str(self._model_dir)}")
+            raise LangDetectError(f"model dir not found at {str(self._model_dir)}")
 
         self._assets_dir = (
                 Path(__file__).parent / "models" / "assets"
@@ -35,13 +48,54 @@ class LangDetect:
         self._assets_labels_path = self._assets_dir / "labels" / "vocabulary.txt"
 
         if not self._assets_dir.is_dir():
-            raise LangDetectorError(f"assets dir not found at {str(self._assets_dir)}")
+            raise LangDetectError(f"assets dir not found at {str(self._assets_dir)}")
         if not self._assets_labels_path.is_file():
-            raise LangDetectorError(f"labels vocabulary not found at {str(self._assets_labels_path)}")
+            raise LangDetectError(f"labels vocabulary not found at {str(self._assets_labels_path)}")
 
         self._session = self._init_session()
 
         self._target_labels_space = self._init_labels_vocabulary()
+
+    def detect(self, text: str) -> Dict[str, str]:
+        """
+        Detect the language of a given text.
+        Args:
+            text (str): Text to detect the language from.
+        Returns:
+            Dict[str, str]: Language detected and its name.
+        """
+        if not text:
+            raise LangDetectError("text is required")
+
+        start_time = time.time()
+        predictions = self._get_model_outputs([text])
+        elapsed_time = time.time() - start_time
+        self._log.debug(f"DL prediction done in {elapsed_time:.03f} seconds")
+        lang = predictions[0][0][0]
+        proba=predictions[0][0][1]
+        lang_name = langs.get(lang, "Unknown")
+
+        # print(predictions)
+
+        return {"lang_name": lang_name, "lang": lang, "proba": proba}
+
+    def detect_batch(self, texts: List[str]) -> List[Dict[str, str]]:
+        """
+        Detect the language of a list of texts.
+        Args:
+            texts (List[str]): List of texts to detect the language from.
+        Returns:
+            List[Dict[str, str]]: List of languages detected and their names.
+        """
+        if not texts:
+            raise LangDetectError("texts are required")
+
+        start_time = time.time()
+        predictions = self._get_model_outputs(texts)
+        elapsed_time = time.time() - start_time
+        self._log.debug(f"DL prediction done in {elapsed_time:.03f} seconds")
+
+        return [{"lang": pred[0][0], "proba": pred[0][1]} for pred in predictions]
 
     def _init_session(self) -> Any:
         start_time = time.time()
@@ -136,18 +190,41 @@ class LangDetect:
         return preds_idxs
 
 
-class LangDetectorError(Exception):
+class LangDetectError(Exception):
     pass
+
+
+def get_logger(name: str = None) -> logging.Logger:
+    global _logger
+
+    if _logger is None:
+        _logger = logging.getLogger(name)
+
+        formatter = logging.Formatter(
+            fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(formatter)
+        _logger.addHandler(handler)
+
+    return _logger
 
 
 if __name__ == "__main__":
     lang_detect = LangDetect(verbose=True, debug=True)
-    result = lang_detect._get_model_outputs(["un text pour tester la detection de langue",
-                                             "The model has as input a dict of features with different types."
-                                                , "Невозможно удалить цвет фона диаграммы после установки"
-                                                ,
-                                             "El modelo tiene como entrada un diccionario de características con diferentes tipos."
-                                                , "پس از تنظیم نمی توان رنگ پس زمینه نمودار را حذف کرد"
-                                                , "Grafiğin arka plan rengi ayarlandıktan sonra kaldırılamıyor",
-                                             "لا يمكن إزالة لون خلفية المخطط بمجرد تعيينه"])
+    result = lang_detect.detect_batch(["un text pour tester la detection de langue",
+                                       "The model has as input a dict of features with different types."
+                                          , "Невозможно удалить цвет фона диаграммы после установки"
+                                          ,
+                                       "El modelo tiene como entrada un diccionario de características con diferentes tipos."
+                                          , "پس از تنظیم نمی توان رنگ پس زمینه نمودار را حذف کرد"
+                                          , "Grafiğin arka plan rengi ayarlandıktan sonra kaldırılamıyor",
+                                       "لا يمكن إزالة لون خلفية المخطط بمجرد تعيينه"])
+
+    print(f"Language detected: {result}")
+
+    result = lang_detect.detect("un text pour tester la detection de langue")
+
     print(f"Language detected: {result}")
