@@ -4,17 +4,22 @@ from flask import Flask, Response, request
 import json
 from langDetect import LangDetect, langs
 
+
+from flask import Blueprint
+
+
 app = Flask(__name__)
 
+api_v1 = Blueprint('api_v1', __name__, url_prefix='/api/v1')
 
-@app.route("/", methods=["GET"])
+app.register_blueprint(api_v1)
+
+@api_v1.route("/", methods=["GET"])
 def get_infos():
-    # Votre code ici
 
     # Convertir le dictionnaire en JSON
     json_data = json.dumps(langs)
 
-    # Créer une réponse avec le JSON et le Content-Type défini sur application/json
     response = app.response_class(
         response=json_data,
         status=200,
@@ -24,7 +29,7 @@ def get_infos():
     return response
 
 
-@app.route("/detect", methods=["POST"])
+@api_v1.route("/detect", methods=["POST"])
 def detect():
     data = request.get_json()
     text = data.get('text')
@@ -48,4 +53,4 @@ def detect():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8080)
+    app.run(debug=True, port=5080)
