@@ -2,7 +2,7 @@
 name = "LangDetectApi"
 version = "0.0.1"
 dependencies = [
-        "flask~=2.0.2",
+        "flask>=2.2.5",
         "tensorflow~=2.15.0",
         "setuptools~=69.1.1",
         "tqdm~=4.66.2",
@@ -10,7 +10,6 @@ dependencies = [
         "tf-keras==2.15.0"
         "tf-slim==1.1.0"
         "keras==2.15.0"
-
 ]
 [build-system]
 requires = ["setuptools"]
