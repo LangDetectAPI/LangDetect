@@ -4,7 +4,7 @@ setup(
     name='LangDetectApi',
     version='0.0.1',
     install_requires=[
-        "flask~=2.0.2",
+        "flask>=2.2.5",
         "tensorflow~=2.15.0",
         "setuptools~=69.1.1",
         "tqdm~=4.66.2",
